@@ -1,34 +1,39 @@
-// You can convert to base64 to bypass browser audio analyzation issues base64guru
-// create a file input HTML element to bypass browser issue
+const container = document.getElementById('container');
+const canvas = document.getElementById('canvas1');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+const ctx = canvas.getContext('2d');
+let audioSource;
+let analyser;
 
-const button1 = document.getElementById('button1');
-// let audio1 = new Audio('data:audio/x-wav;base64,insertBase64Here');
-let audio1 = new Audio();
-audio1.src = 'Sightless2Flowers.wav';
-// This is the old syntx, below should work just fine
-// const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const audioCtx = new AudioContext();
-console.log(audioCtx);
-
-
-button1.addEventListener('click', function() {
+container.addEventListener('click', function() {
+    const audio1 = document.getElementById('audio1');
+    audio1.src = 'Sightless2Flowers.wav';
+    const audioContext = new AudioContext();
     audio1.play();
-    audio1.addEventListener('playing', function() {
-        console.log('Audio 1 started playing!');
-    });
-    audio1.addEventListener('ended', function() {
-        console.log('Audio 1 ended!');
-    });
-});
+    audioSource = audioContext.createMediaElementSource(audio1);
+    analyser = audioContext.createAnalyser();
+    audioSource.connect(analyser);
+    analyser.connect(audioContext.destination);
+    analyser.fftSize = 64;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
 
-const button2 = document.getElementById('button2');
-button2.addEventListener('click', playSound);
-function playSound() {
-    const oscillator = audioCtx.createOscillator();
-    oscillator.connect(audioCtx.destination);
-    oscillator.type = 'sine'; //sine, square, sawtooth, triangle
-    oscillator.start();
-    setTimeout(function() {
-        oscillator.stop();
-    }, 1000);
-}
+    const barWidth = canvas.width/bufferLength;
+    let barHeight;
+    let x;
+
+    function animate() {
+        x = 0;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        analyser.getByteFrequencyData(dataArray);
+        for (let i = 0; i < bufferLength; i++) {
+            barHeight = dataArray[i];
+            ctx.fillStyle = 'white';
+            ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+            x += barWidth;
+        }
+        requestAnimationFrame(animate);
+    }
+    animate();
+});
